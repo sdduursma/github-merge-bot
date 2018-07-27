@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [github-merge-bot.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest test-pull-to-update
+  (testing
+    (is (= [] (pull-to-update [])))
+    (is (= [{:number 1}] (pull-to-update [{:number 1}])))))
