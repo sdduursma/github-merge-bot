@@ -21,6 +21,4 @@
   "I don't do a whole lot ... yet."
   [& args]
   (println "Hello, World!")
-  (pprint/pprint (:number (pull-to-update (pulls/pulls "sdduursma" "github-merge-bot-test" #_{:auth-token "xxx"})))))
-
-"xxx"
+  (pprint/pprint (:number (pull-to-update (pulls/pulls "sdduursma" "github-merge-bot-test")))))
