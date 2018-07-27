@@ -1,0 +1,5 @@
+{:deps
+ {org.clojure/clojure {:mvn/version "1.9.0"}
+  irresponsible/tentacles {:mvn/version "0.6.2"}
+  org.clojure/tools.logging {:mvn/version "0.4.1"}
+  clj-jgit {:mvn/version "0.8.10"}}}
