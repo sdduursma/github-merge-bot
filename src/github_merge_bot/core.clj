@@ -15,8 +15,8 @@
 (defn pull-requests-to-update
   "Pull requests to update with their base branch."
   [owner repo pulls]
-  [(oldest (filter #(mergeable? owner repo (:number %))
-                   pulls))])
+  (filter some? [(oldest (filter #(mergeable? owner repo (:number %))
+                                 pulls))]))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
