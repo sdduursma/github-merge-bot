@@ -1,5 +1,0 @@
-{:deps
- {org.clojure/clojure {:mvn/version "1.9.0"}
-  irresponsible/tentacles {:mvn/version "0.6.2"}
-  org.clojure/tools.logging {:mvn/version "0.4.1"}
-  clj-jgit {:local/root "/Users/samueld/Developer/clj-jgit/clj-jgit/target/clj-jgit-0.9.1-SNAPSHOT.jar"}}}
