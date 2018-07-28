@@ -26,8 +26,9 @@
     (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
     (git/git-fetch repo "origin")
     (git/git-checkout repo head-branch true false (str "origin/" head-branch))
-    (git/git-rebase repo "origin/master")
-    ; git/with-credentials didn't seem to work so using JGit here directly instead.
+    ; clj-jgit.porcelain/rebase hasn't been implemented yet so using JGit here directly instead.
+    (-> repo .rebase (.setUpstream "origin/master") .call)
+    ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
     (-> repo
         (.push)
         (.setRemote "origin")
