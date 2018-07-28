@@ -5,8 +5,8 @@
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
   (:gen-class))
 
-(defn mergeable? [pull-id]
-  (:mergeable (pulls/specific-pull "sdduursma" "github-merge-bot-test" pull-id)))
+(defn mergeable? [owner repo pull-id]
+  (:mergeable (pulls/specific-pull owner repo pull-id)))
 
 ; TODO: `last` correct?
 (defn oldest [pulls]
@@ -14,9 +14,9 @@
 
 (defn pull-requests-to-update
   "Pull requests to update with their base branch."
-  [pulls]
-  [(oldest (filter #(mergeable? (:number %))
-                  pulls))])
+  [owner repo pulls]
+  [(oldest (filter #(mergeable? owner repo (:number %))
+                   pulls))])
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
@@ -37,7 +37,9 @@
 
 (defn merge-pull-requests []
   (println "Checking pull requests...")
-  (let [pull-requests (pull-requests-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))
+  (let [owner (System/getenv "GITHUB_MERGE_BOT_OWNER")
+        repo (System/getenv "GITHUB_MERGE_BOT_REPO")
+        pull-requests (pull-requests-to-update owner repo (pulls/pulls owner repo))
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (doseq [pr pull-requests]
