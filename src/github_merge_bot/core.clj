@@ -1,7 +1,7 @@
 (ns github-merge-bot.core
   (:require [tentacles.pulls :as pulls]
             [clj-jgit.porcelain :as git])
-  (:import (java.util UUID)
+  (:import (java.util UUID Timer TimerTask Date)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
   (:gen-class))
 
@@ -35,10 +35,17 @@
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
         (.call))))
 
-(defn -main
-  [& args]
+(defn merge-pull-requests []
+  (println "Checking pull requests...")
   (let [pull-requests (pull-requests-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (doseq [pr pull-requests]
       (update-pull "sdduursma" "github-merge-bot-test" pr credentials))))
+
+(defn -main
+  [& args]
+  (let [timer-task (proxy [TimerTask] []
+                     (run []
+                       (merge-pull-requests)))]
+    (.scheduleAtFixedRate (Timer.) timer-task 0 30000)))
