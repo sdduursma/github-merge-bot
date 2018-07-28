@@ -2,7 +2,7 @@
   (:require [tentacles.pulls :as pulls]
             [clojure.pprint :as pprint]
             [clojure.tools.logging :as log]
-            [clj-jgit.porcelain :as git])
+            [clj-jgit.porcelain :refer :all])
   (:import (java.util UUID))
   (:gen-class))
 
@@ -23,12 +23,12 @@
 
 (defn update-pull [owner repo pull-request]
   ;; TODO: Clone every time?
-  (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
+  (let [repo (:repo (git-clone-full (str "https://github.com/" owner "/" repo ".git")
                                         (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
         head-branch (:ref (:head pull-request))]
     (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
-    (git/git-fetch repo "origin")
-    (git/git-checkout repo head-branch true false (str "origin/" head-branch))))
+    (git-fetch repo "origin")
+    (git-checkout repo head-branch true false (str "origin/" head-branch))))
 
 (defn -main
   "I don't do a whole lot ... yet."
