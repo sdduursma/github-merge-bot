@@ -21,15 +21,19 @@
 
 (defn rebase [])
 
-(defn update-pull [owner repo pull-id]
+(defn update-pull [owner repo pull-request]
   ;; TODO: Clone every time?
-  (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
-                      (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
+  (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
+                                        (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
+        head-branch (:ref (:head pull-request))]
+    (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
+    (git/git-fetch repo "origin")
+    (git/git-checkout repo head-branch true false (str "origin/" head-branch))))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (println "Hello, World!")
-  (let [pull (:number (pull-to-update (pulls/pulls "sdduursma" "github-merge-bot-test")))]
+  (let [pull (pull-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))]
     (println pull)
     (update-pull "sdduursma" "github-merge-bot-test" pull)))
