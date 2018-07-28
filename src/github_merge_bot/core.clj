@@ -19,8 +19,6 @@
   [(oldest (filter #(mergeable? (:number %))
                   pulls))])
 
-(defn rebase [])
-
 (defn update-pull [owner repo pull-request]
   ;; TODO: Clone every time?
   (let [repo (:repo (git-clone-full (str "https://github.com/" owner "/" repo ".git")
@@ -33,7 +31,6 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (println "Hello, World!")
   (let [pull-requests (pull-requests-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))]
     (doseq [pr pull-requests]
       (update-pull "sdduursma" "github-merge-bot-test" pr))))
