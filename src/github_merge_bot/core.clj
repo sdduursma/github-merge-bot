@@ -13,11 +13,11 @@
 (defn oldest [pulls]
   (last (sort-by :created-at pulls)))
 
-(defn pull-to-update
-  "Pull requests to update with its base branch."
+(defn pull-requests-to-update
+  "Pull requests to update with their base branch."
   [pulls]
-  (oldest (filter #(mergeable? (:number %))
-                  pulls)))
+  [(oldest (filter #(mergeable? (:number %))
+                  pulls))])
 
 (defn rebase [])
 
@@ -34,6 +34,6 @@
   "I don't do a whole lot ... yet."
   [& args]
   (println "Hello, World!")
-  (let [pull (pull-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))]
-    (println pull)
-    (update-pull "sdduursma" "github-merge-bot-test" pull)))
+  (let [pull-requests (pull-requests-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))]
+    (doseq [pr pull-requests]
+      (update-pull "sdduursma" "github-merge-bot-test" pr))))
