@@ -3,7 +3,8 @@
             [clojure.pprint :as pprint]
             [clojure.tools.logging :as log]
             [clj-jgit.porcelain :as git])
-  (:import (java.util UUID))
+  (:import (java.util UUID)
+           (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
   (:gen-class))
 
 (defn mergeable? [pull-id]
@@ -26,7 +27,15 @@
         head-branch (:ref (:head pull-request))]
     (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
     (git/git-fetch repo "origin")
-    (git/git-checkout repo head-branch true false (str "origin/" head-branch))))
+    (git/git-checkout repo head-branch true false (str "origin/" head-branch))
+    (git/git-rebase repo "origin/master")
+    ; git/with-credentials didn't seem to work so using JGit here directly instead.
+    (-> repo
+        (.push)
+        (.setRemote "origin")
+        (.setForce true)
+        (.setCredentialsProvider (UsernamePasswordCredentialsProvider. "sdduursma" "xxx"))
+        (.call))))
 
 (defn -main
   "I don't do a whole lot ... yet."
