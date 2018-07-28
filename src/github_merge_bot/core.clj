@@ -1,7 +1,5 @@
 (ns github-merge-bot.core
   (:require [tentacles.pulls :as pulls]
-            [clojure.pprint :as pprint]
-            [clojure.tools.logging :as log]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
@@ -38,7 +36,6 @@
         (.call))))
 
 (defn -main
-  "I don't do a whole lot ... yet."
   [& args]
   (let [pull-requests (pull-requests-to-update (pulls/pulls "sdduursma" "github-merge-bot-test"))
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
