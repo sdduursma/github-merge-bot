@@ -3,6 +3,7 @@
             [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID Timer TimerTask Date)
+           (org.eclipse.jgit.api Git)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider)
            (org.eclipse.jgit.revwalk RevWalk)
            (org.eclipse.jgit.revwalk.filter RevFilter)
@@ -31,13 +32,28 @@
                       (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
                 (sort-by :created-at pull-requests))))
 
-(defn head-up-to-date-with-base? [repo pull-request]
-  (let [merge-base (doto (RevWalk. repo) (.setRevFilter (RevFilter/MERGE_BASE))
-                                         (.markStart (:sha (:head pull-request)))
-                                         (.markStart (:sha (:base pull-request)))
-                                         (.next))]
-    (= (.getName merge-base)
-       (:sha (:base pull-request)))))
+(defn head-up-to-date-with-base? [owner repo pull-request]
+  ; TODO: Avoid git clone duplication with update-pull.
+  (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
+                                        (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
+        head-branch (:ref (:head pull-request))]
+    (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
+    (git/git-fetch repo "origin")
+    (git/git-checkout repo head-branch true false (str "origin/" head-branch))
+    (let [rev-walk (RevWalk. (.getRepository repo))
+          master (.parseCommit rev-walk (.getObjectId (.exactRef (.getRepository repo) "refs/heads/master")))
+          _ (.reset rev-walk)
+          base (.parseCommit rev-walk (ObjectId/fromString (:sha (:head pull-request))))
+          _ (.reset rev-walk)
+          merge-base (-> (doto rev-walk (.setRevFilter (RevFilter/MERGE_BASE))
+                                        (.markStart [master base]))
+                         (.next))]
+      (let [merge-base-sha (.getName merge-base)
+            master-sha (.getName master)]
+        (println "merge base sha:" merge-base-sha)
+        (println "master sha:" master-sha))
+      (= (.getName merge-base)
+         (.getName master)))))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
@@ -69,10 +85,12 @@
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (if-let [pr (merge-candidate "sdduursma" "github-merge-bot-test" (pulls/pulls owner repo))]
-      (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
-      (println "No pull requests to merge."))
+      (if (head-up-to-date-with-base? owner repo pr)
+        (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
+        (update-pull "sdduursma" "github-merge-bot-test" pr credentials))
+      (println "No pull requests found to merge or update."))
     #_(if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
-      (update-pull "sdduursma" "github-merge-bot-test" pull-request credentials)
+
       (println "No pull requests to update."))))
 
 (defn -main
