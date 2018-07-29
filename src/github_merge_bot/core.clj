@@ -5,6 +5,10 @@
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
   (:gen-class))
 
+(defn has-label [pull-request]
+  (contains? (set (map :name (:labels pull-request)))
+             "LGTM"))
+
 (defn mergeable? [owner repo pull-id]
   (:mergeable (pulls/specific-pull owner repo pull-id)))
 
@@ -12,7 +16,8 @@
   "Pull request to update with its base branch."
   [owner repo pull-requests]
   ; TODO: Is `last` correct here?
-  (last (filter #(mergeable? owner repo (:number %)) (sort-by :created-at pull-requests))))
+  (last (filter #(and (has-label %)
+                      (mergeable? owner repo (:number %))) (sort-by :created-at pull-requests))))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
