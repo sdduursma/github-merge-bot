@@ -74,6 +74,9 @@
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
         (.call))))
 
+(defn merging-permitted? [owner repo pull-request]
+  (= "success" (:state (github-ref-status owner repo (:ref (:head pull-request))))))
+
 (defn merge-pull-request [owner repo pull-request credentials]
   (println (str "Merging pull request #" (:number pull-request) "..."))
   (println (pulls/merge owner repo (:number pull-request) {:auth (str (:username credentials) ":" (:password credentials))})))
@@ -86,7 +89,9 @@
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (if-let [pr (merge-candidate "sdduursma" "github-merge-bot-test" (pulls/pulls owner repo))]
       (if (head-up-to-date-with-base? owner repo pr)
-        (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
+        (if (merging-permitted? owner repo pr)
+          (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
+          (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
         (update-pull "sdduursma" "github-merge-bot-test" pr credentials))
       (println "No pull requests found to merge or update."))
     #_(if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
