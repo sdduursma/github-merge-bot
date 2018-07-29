@@ -16,6 +16,7 @@
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
+  (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
   (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
                                         (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
         head-branch (:ref (:head pull-request))]
@@ -39,7 +40,8 @@
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
-      (update-pull "sdduursma" "github-merge-bot-test" pull-request credentials))))
+      (update-pull "sdduursma" "github-merge-bot-test" pull-request credentials)
+      (println "No pull requests to update."))))
 
 (defn -main
   [& args]
