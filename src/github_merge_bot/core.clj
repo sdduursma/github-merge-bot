@@ -8,15 +8,11 @@
 (defn mergeable? [owner repo pull-id]
   (:mergeable (pulls/specific-pull owner repo pull-id)))
 
-; TODO: `last` correct?
-(defn oldest [pulls]
-  (last (sort-by :created-at pulls)))
-
-(defn pull-requests-to-update
-  "Pull requests to update with their base branch."
-  [owner repo pulls]
-  (filter some? [(oldest (filter #(mergeable? owner repo (:number %))
-                                 pulls))]))
+(defn pull-request-to-update
+  "Pull request to update with its base branch."
+  [owner repo pull-requests]
+  ; TODO: Is `last` correct here?
+  (last (filter #(mergeable? owner repo (:number %)) (sort-by :created-at pull-requests))))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
@@ -26,7 +22,7 @@
     (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
     (git/git-fetch repo "origin")
     (git/git-checkout repo head-branch true false (str "origin/" head-branch))
-    ; clj-jgit.porcelain/rebase hasn't been implemented yet so using JGit here directly instead.
+    ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
     (-> repo .rebase (.setUpstream "origin/master") .call)
     ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
     (-> repo
@@ -40,11 +36,10 @@
   (println "Checking pull requests...")
   (let [owner (System/getenv "GITHUB_MERGE_BOT_OWNER")
         repo (System/getenv "GITHUB_MERGE_BOT_REPO")
-        pull-requests (pull-requests-to-update owner repo (pulls/pulls owner repo))
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
-    (doseq [pr pull-requests]
-      (update-pull "sdduursma" "github-merge-bot-test" pr credentials))))
+    (if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
+      (update-pull "sdduursma" "github-merge-bot-test" pull-request credentials))))
 
 (defn -main
   [& args]
