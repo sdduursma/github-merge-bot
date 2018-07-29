@@ -1,9 +1,13 @@
 (ns github-merge-bot.core
   (:require [tentacles.pulls :as pulls]
+            [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID Timer TimerTask Date)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
   (:gen-class))
+
+(defn github-ref-status [owner repo ref & [options]]
+  (tentacles/api-call :get "repos/%s/%s/commits/%s/status" [owner repo ref] options))
 
 (defn has-label [pull-request]
   (contains? (set (map :name (:labels pull-request)))
@@ -18,6 +22,11 @@
   ; TODO: Is `last` correct here?
   (last (filter #(and (has-label %)
                       (mergeable? owner repo (:number %))) (sort-by :created-at pull-requests))))
+
+(defn merge-candidate [owner repo pull-requests]
+  (last (filter #(and (has-label %)
+                      (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
+                (sort-by :created-at pull-requests))))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
@@ -38,13 +47,20 @@
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
         (.call))))
 
+(defn merge-pull-request [owner repo pull-request credentials]
+  (println (str "Merging pull request #" (:number pull-request) "..."))
+  (println (pulls/merge owner repo (:number pull-request) {:auth (str (:username credentials) ":" (:password credentials))})))
+
 (defn merge-pull-requests []
   (println "Checking pull requests...")
   (let [owner (System/getenv "GITHUB_MERGE_BOT_OWNER")
         repo (System/getenv "GITHUB_MERGE_BOT_REPO")
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
-    (if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
+    (if-let [pr (merge-candidate "sdduursma" "github-merge-bot-test" (pulls/pulls owner repo))]
+      (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
+      (println "No pull requests to merge."))
+    #_(if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
       (update-pull "sdduursma" "github-merge-bot-test" pull-request credentials)
       (println "No pull requests to update."))))
 
