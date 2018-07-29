@@ -3,7 +3,6 @@
             [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID Timer TimerTask Date)
-           (org.eclipse.jgit.api Git)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider)
            (org.eclipse.jgit.revwalk RevWalk)
            (org.eclipse.jgit.revwalk.filter RevFilter)
@@ -16,16 +15,6 @@
 (defn has-label [pull-request]
   (contains? (set (map :name (:labels pull-request)))
              "LGTM"))
-
-(defn mergeable? [owner repo pull-id]
-  (:mergeable (pulls/specific-pull owner repo pull-id)))
-
-(defn pull-request-to-update
-  "Pull request to update with its base branch."
-  [owner repo pull-requests]
-  ; TODO: Is `last` correct here?
-  (last (filter #(and (has-label %)
-                      (mergeable? owner repo (:number %))) (sort-by :created-at pull-requests))))
 
 (defn merge-candidate [owner repo pull-requests]
   (last (filter #(and (has-label %)
@@ -93,10 +82,7 @@
           (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
           (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
         (update-pull "sdduursma" "github-merge-bot-test" pr credentials))
-      (println "No pull requests found to merge or update."))
-    #_(if-let [pull-request (pull-request-to-update owner repo (pulls/pulls owner repo))]
-
-      (println "No pull requests to update."))))
+      (println "No pull requests found to merge or update."))))
 
 (defn -main
   [& args]
