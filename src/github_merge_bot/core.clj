@@ -3,7 +3,10 @@
             [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID Timer TimerTask Date)
-           (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider))
+           (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider)
+           (org.eclipse.jgit.revwalk RevWalk)
+           (org.eclipse.jgit.revwalk.filter RevFilter)
+           (org.eclipse.jgit.lib ObjectId))
   (:gen-class))
 
 (defn github-ref-status [owner repo ref & [options]]
@@ -27,6 +30,14 @@
   (last (filter #(and (has-label %)
                       (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
                 (sort-by :created-at pull-requests))))
+
+(defn head-up-to-date-with-base? [repo pull-request]
+  (let [merge-base (doto (RevWalk. repo) (.setRevFilter (RevFilter/MERGE_BASE))
+                                         (.markStart (:sha (:head pull-request)))
+                                         (.markStart (:sha (:base pull-request)))
+                                         (.next))]
+    (= (.getName merge-base)
+       (:sha (:base pull-request)))))
 
 (defn update-pull [owner repo pull-request credentials]
   ;; TODO: Clone every time?
