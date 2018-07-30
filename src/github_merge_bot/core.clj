@@ -76,12 +76,12 @@
         repo (System/getenv "GITHUB_MERGE_BOT_REPO")
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
-    (if-let [pr (merge-candidate "sdduursma" "github-merge-bot-test" (pulls/pulls owner repo))]
+    (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
       (if (head-up-to-date-with-base? owner repo pr)
         (if (merging-permitted? owner repo pr)
-          (merge-pull-request "sdduursma" "github-merge-bot-test" pr credentials)
+          (merge-pull-request owner repo pr credentials)
           (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
-        (update-pull "sdduursma" "github-merge-bot-test" pr credentials))
+        (update-pull owner repo pr credentials))
       (println "No pull requests found to merge or update."))))
 
 (defn -main
