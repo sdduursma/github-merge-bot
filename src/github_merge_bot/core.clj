@@ -68,7 +68,7 @@
 
 (defn merge-pull-request [owner repo pull-request credentials]
   (println (str "Merging pull request #" (:number pull-request) "..."))
-  (println (pulls/merge owner repo (:number pull-request) {:auth (str (:username credentials) ":" (:password credentials))})))
+  (println (pulls/merge owner repo (:number pull-request) {})))
 
 (defn merge-pull-requests []
   (println "Checking pull requests...")
@@ -76,13 +76,14 @@
         repo (System/getenv "GITHUB_MERGE_BOT_REPO")
         credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
-    (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
-      (if (head-up-to-date-with-base? owner repo pr)
-        (if (merging-permitted? owner repo pr)
-          (merge-pull-request owner repo pr credentials)
-          (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
-        (update-pull owner repo pr credentials))
-      (println "No pull requests found to merge or update."))))
+    (tentacles/with-defaults {:auth (str (:username credentials) ":" (:password credentials))}
+      (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
+        (if (head-up-to-date-with-base? owner repo pr)
+          (if (merging-permitted? owner repo pr)
+            (merge-pull-request owner repo pr credentials)
+            (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
+          (update-pull owner repo pr credentials))
+        (println "No pull requests found to merge or update.")))))
 
 (defn -main
   [& args]
