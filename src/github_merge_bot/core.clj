@@ -3,10 +3,11 @@
             [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
   (:import (java.util UUID Timer TimerTask Date)
-           (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider)
+           (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider RefSpec)
            (org.eclipse.jgit.revwalk RevWalk)
            (org.eclipse.jgit.revwalk.filter RevFilter)
-           (org.eclipse.jgit.lib ObjectId))
+           (org.eclipse.jgit.lib ObjectId)
+           (java.io FileNotFoundException))
   (:gen-class))
 
 (defn github-ref-status [owner repo ref & [options]]
@@ -21,16 +22,22 @@
                       (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
                 (sort-by :created-at pull-requests))))
 
+(defn procure-repo
+  ([owner repo-name]
+   (procure-repo owner repo-name (str "./tmp/" owner "/" repo-name)))
+  ([owner repo-name directory]
+   (try
+     (git/load-repo directory)
+     (catch FileNotFoundException _
+       (println "Repo not found locally, cloning...")
+       (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo-name ".git")
+                                  directory))))))
+
 (defn head-up-to-date-with-base? [owner repo pull-request]
-  ; TODO: Avoid git clone duplication with update-pull.
-  (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
-                                        (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
-        head-branch (:ref (:head pull-request))]
-    (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
+  (let [repo (procure-repo owner repo)]
     (git/git-fetch repo "origin")
-    (git/git-checkout repo head-branch true false (str "origin/" head-branch))
     (let [rev-walk (RevWalk. (.getRepository repo))
-          master (.parseCommit rev-walk (.getObjectId (.exactRef (.getRepository repo) "refs/heads/master")))
+          master (.parseCommit rev-walk (.getObjectId (.findRef (.getRepository repo) "origin/master")))
           _ (.reset rev-walk)
           base (.parseCommit rev-walk (ObjectId/fromString (:sha (:head pull-request))))
           _ (.reset rev-walk)
@@ -45,20 +52,18 @@
          (.getName master)))))
 
 (defn update-pull [owner repo pull-request credentials]
-  ;; TODO: Clone every time?
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
-  (let [repo (:repo (git/git-clone-full (str "https://github.com/" owner "/" repo ".git")
-                                        (str "./tmp/" (UUID/randomUUID) owner "/" repo)))
-        head-branch (:ref (:head pull-request))]
-    (println "Cloned repo to" (.getPath (.getDirectory (.getRepository repo))))
-    (git/git-fetch repo "origin")
-    (git/git-checkout repo head-branch true false (str "origin/" head-branch))
+  (let [repo (procure-repo owner repo)
+        head (:sha (:head pull-request))]
+    (git/git-fetch repo "origin" "refs/heads/remove-plum")
+    (git/git-checkout repo head)
     ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
     (-> repo .rebase (.setUpstream "origin/master") .call)
     ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
     (-> repo
         (.push)
         (.setRemote "origin")
+        (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
         (.setForce true)
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
         (.call))))
