@@ -68,12 +68,12 @@
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
         (.call))))
 
-(defn merging-permitted? [owner repo pull-request]
-  (= "success" (:state (github-ref-status owner repo (:ref (:head pull-request))))))
-
-(defn merge-pull-request [owner repo pull-request credentials]
-  (println (str "Merging pull request #" (:number pull-request) "..."))
-  (println (pulls/merge owner repo (:number pull-request) {})))
+(defn try-merge-pull-request [owner repo pull-request credentials]
+  (println (str "Trying to merge pull request #" (:number pull-request) "..."))
+  (let [result (pulls/merge owner repo (:number pull-request) {})]
+    (if (:merged result)
+      (println (str "Successfully merged pull request #" (:number pull-request) "."))
+      (println (str "Unable to merge pull request #" (:number pull-request) ": " (:message result))))))
 
 (defn merge-pull-requests []
   (println "Checking pull requests...")
@@ -85,9 +85,7 @@
       (git/with-credentials (:username credentials) (:password credentials)
          (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
            (if (head-up-to-date-with-base? owner repo pr)
-             (if (merging-permitted? owner repo pr)
-               (merge-pull-request owner repo pr credentials)
-               (println (str "Not permitted to merge pull request #" (:number pr) " yet.")))
+             (try-merge-pull-request owner repo pr credentials)
              (update-pull owner repo pr credentials))
            (println "No pull requests found to merge or update."))))))
 
