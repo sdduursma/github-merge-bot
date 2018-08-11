@@ -13,12 +13,12 @@
 (defn github-ref-status [owner repo ref & [options]]
   (tentacles/api-call :get "repos/%s/%s/commits/%s/status" [owner repo ref] options))
 
-(defn has-label [pull-request]
+(defn has-label? [pull-request]
   (contains? (set (map :name (:labels pull-request)))
              "LGTM"))
 
 (defn merge-candidate [owner repo pull-requests]
-  (last (filter #(and (has-label %)
+  (last (filter #(and (has-label? %)
                       (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
                 (sort-by :created-at pull-requests))))
 
