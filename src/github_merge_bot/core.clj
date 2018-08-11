@@ -2,7 +2,7 @@
   (:require [tentacles.pulls :as pulls]
             [tentacles.core :as tentacles]
             [clj-jgit.porcelain :as git])
-  (:import (java.util UUID Timer TimerTask Date)
+  (:import (java.util Timer TimerTask)
            (org.eclipse.jgit.transport UsernamePasswordCredentialsProvider RefSpec)
            (org.eclipse.jgit.revwalk RevWalk)
            (org.eclipse.jgit.revwalk.filter RevFilter)
@@ -44,10 +44,6 @@
           merge-base (-> (doto rev-walk (.setRevFilter (RevFilter/MERGE_BASE))
                                         (.markStart [master base]))
                          (.next))]
-      (let [merge-base-sha (.getName merge-base)
-            master-sha (.getName master)]
-        (println "merge base sha:" merge-base-sha)
-        (println "master sha:" master-sha))
       (= (.getName merge-base)
          (.getName master)))))
 
