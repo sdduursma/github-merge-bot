@@ -90,4 +90,4 @@
   (let [timer-task (proxy [TimerTask] []
                      (run []
                        (merge-pull-requests)))]
-    (.schedule (Timer.) timer-task 0 30000)))
+    (.schedule (Timer.) timer-task 0 15000)))
