@@ -51,7 +51,7 @@
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
   (let [repo (procure-repo owner repo)
         head (:sha (:head pull-request))]
-    (git/git-fetch repo "origin" "refs/heads/remove-plum")
+    (git/git-fetch repo "origin")
     (git/git-checkout repo head)
     ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
     (-> repo .rebase (.setUpstream "origin/master") .call)
