@@ -10,16 +10,12 @@
            (java.io FileNotFoundException))
   (:gen-class))
 
-(defn github-ref-status [owner repo ref & [options]]
-  (tentacles/api-call :get "repos/%s/%s/commits/%s/status" [owner repo ref] options))
-
 (defn has-label? [pull-request]
   (contains? (set (map :name (:labels pull-request)))
              "LGTM"))
 
 (defn merge-candidate [owner repo pull-requests]
-  (last (filter #(and (has-label? %)
-                      (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
+  (last (filter #(has-label? %)
                 (sort-by :created-at pull-requests))))
 
 (defn procure-repo
