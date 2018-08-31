@@ -20,5 +20,5 @@
         _ (git/git-checkout origin-repo "master")
         repo (:repo (git/git-clone-full origin-repo-dir (str (System/getProperty "java.io.tmpdir") (UUID/randomUUID))))]
     (with-redefs [procure-repo (constantly repo)]
-      (update-pull "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c") {:username "foo" :password "abc"})
+      (update-pull-request "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c") {:username "foo" :password "abc"})
       (is (head-up-to-date-with-base? "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c"))))))

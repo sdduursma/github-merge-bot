@@ -47,7 +47,7 @@
       (= (.getName merge-base)
          (.getName master)))))
 
-(defn update-pull [owner repo pull-request credentials]
+(defn update-pull-request [owner repo pull-request credentials]
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
   (let [repo (procure-repo owner repo)
         head (:sha (:head pull-request))]
@@ -82,7 +82,7 @@
          (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
            (if (head-up-to-date-with-base? owner repo pr)
              (try-merge-pull-request owner repo pr credentials)
-             (update-pull owner repo pr credentials))
+             (update-pull-request owner repo pr credentials))
            (println "No pull requests found to merge or update."))))))
 
 (defn -main
