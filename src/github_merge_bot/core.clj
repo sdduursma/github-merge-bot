@@ -10,6 +10,21 @@
            (java.io FileNotFoundException))
   (:gen-class))
 
+(defn github-reviews [owner repo pr-id & [options]]
+  (tentacles/api-call :get "repos/%s/%s/pulls/%s/reviews" [owner repo pr-id] options))
+
+(defn github-create-review [owner repo pr-id & [options]]
+  (tentacles/api-call :post "repos/%s/%s/pulls/%s/reviews" [owner repo pr-id] options))
+
+(defn approved? [owner repo pull-request]
+  (let [reviews (github-reviews owner repo (:number pull-request))
+        reviews-by-author (partition-by #(-> % :user :id) reviews)
+        approves-by-author (for [reviews reviews-by-author]
+                             (->> reviews (map :state) (filter #{"CHANGES_REQUESTED" "APPROVED"}) last (= "APPROVED")))]
+    (and
+      (not (empty? approves-by-author))
+      (every? true? approves-by-author))))
+
 (defn has-label? [pull-request]
   (contains? (set (map :name (:labels pull-request)))
              "LGTM"))
@@ -43,10 +58,11 @@
       (= (.getName merge-base)
          (.getName master)))))
 
-(defn update-pull-request [owner repo pull-request credentials]
+(defn update-pull-request [owner repo-name pull-request credentials]
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
-  (let [repo (procure-repo owner repo)
-        head (:sha (:head pull-request))]
+  (let [repo (procure-repo owner repo-name)
+        head (:sha (:head pull-request))
+        approved (approved? owner repo-name pull-request)]
     (git/git-fetch repo "origin")
     (git/git-checkout repo head)
     ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
@@ -58,7 +74,15 @@
         (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
         (.setForce true)
         (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
-        (.call))))
+        (.call))
+    (if approved
+      ; TODO: Specify :commit-id when creating review.
+      (do (println "Re-approving pull request after updating...")
+          (github-create-review owner
+                                repo-name
+                                (:number pull-request)
+                                {:body  "Automatically re-approving after updating this pull request."
+                                 :event "APPROVE"})))))
 
 (defn try-merge-pull-request [owner repo pull-request credentials]
   (println (str "Trying to merge pull request #" (:number pull-request) "..."))
@@ -75,11 +99,11 @@
                      :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
     (tentacles/with-defaults {:auth (str (:username credentials) ":" (:password credentials))}
       (git/with-credentials (:username credentials) (:password credentials)
-         (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
-           (if (head-up-to-date-with-base? owner repo pr)
-             (try-merge-pull-request owner repo pr credentials)
-             (update-pull-request owner repo pr credentials))
-           (println "No pull requests found to merge or update."))))))
+        (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
+          (if (head-up-to-date-with-base? owner repo pr)
+            (try-merge-pull-request owner repo pr credentials)
+            (update-pull-request owner repo pr credentials))
+          (println "No pull requests found to merge or update."))))))
 
 (defn -main
   [& args]
