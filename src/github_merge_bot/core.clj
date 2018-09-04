@@ -10,16 +10,12 @@
            (java.io FileNotFoundException))
   (:gen-class))
 
-(defn github-ref-status [owner repo ref & [options]]
-  (tentacles/api-call :get "repos/%s/%s/commits/%s/status" [owner repo ref] options))
-
 (defn has-label? [pull-request]
   (contains? (set (map :name (:labels pull-request)))
              "LGTM"))
 
 (defn merge-candidate [owner repo pull-requests]
-  (last (filter #(and (has-label? %)
-                      (contains? #{"pending" "success"} (:state (github-ref-status owner repo (:ref (:head %))))))
+  (last (filter #(has-label? %)
                 (sort-by :created-at pull-requests))))
 
 (defn procure-repo
@@ -47,7 +43,7 @@
       (= (.getName merge-base)
          (.getName master)))))
 
-(defn update-pull [owner repo pull-request credentials]
+(defn update-pull-request [owner repo pull-request credentials]
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
   (let [repo (procure-repo owner repo)
         head (:sha (:head pull-request))]
@@ -82,7 +78,7 @@
          (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
            (if (head-up-to-date-with-base? owner repo pr)
              (try-merge-pull-request owner repo pr credentials)
-             (update-pull owner repo pr credentials))
+             (update-pull-request owner repo pr credentials))
            (println "No pull requests found to merge or update."))))))
 
 (defn -main
