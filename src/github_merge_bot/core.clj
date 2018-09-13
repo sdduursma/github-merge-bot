@@ -68,22 +68,23 @@
     (git/git-checkout repo head)
     ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
     (-> repo .rebase (.setUpstream "origin/master") .call)
-    ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
-    (-> repo
-        (.push)
-        (.setRemote "origin")
-        (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
-        (.setForce true)
-        (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
-        (.call))
-    (if approved
-      ; TODO: Specify :commit-id when creating review.
-      (do (println "Re-approving pull request after updating...")
-          (github-create-review owner
-                                repo-name
-                                (:number pull-request)
-                                {:body  "Automatically re-approving after updating this pull request."
-                                 :event "APPROVE"})))))
+    (let [new-head (-> repo .getRepository (.findRef "HEAD") .getObjectId .getName)]
+      ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
+      (-> repo
+          (.push)
+          (.setRemote "origin")
+          (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
+          (.setForce true)
+          (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
+          (.call))
+      (if approved
+        (do (println "Re-approving pull request after updating...")
+            (github-create-review owner
+                                  repo-name
+                                  (:number pull-request)
+                                  {:commit-id new-head
+                                   :body  "Automatically re-approving after updating this pull request."
+                                   :event "APPROVE"}))))))
 
 (defn try-merge-pull-request [owner repo pull-request credentials]
   (println (str "Trying to merge pull request #" (:number pull-request) "..."))
