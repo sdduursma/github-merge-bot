@@ -7,7 +7,8 @@
            (org.eclipse.jgit.revwalk RevWalk)
            (org.eclipse.jgit.revwalk.filter RevFilter)
            (org.eclipse.jgit.lib ObjectId)
-           (java.io FileNotFoundException))
+           (java.io FileNotFoundException)
+           (org.eclipse.jgit.api Git))
   (:gen-class))
 
 (defn github-reviews [owner repo pr-id & [options]]
@@ -60,7 +61,7 @@
 
 (defn update-pull-request [owner repo-name pull-request credentials]
   (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
-  (let [repo (procure-repo owner repo-name)
+  (let [^Git repo (procure-repo owner repo-name)
         head (:sha (:head pull-request))
         approved (approved? owner repo-name pull-request)]
     (git/git-fetch repo "origin")
