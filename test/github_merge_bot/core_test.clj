@@ -10,6 +10,34 @@
    :head {:sha (.getName (.getObjectId (.findRef (.getRepository origin-repo) branch-name)))
           :ref branch-name}})
 
+(deftest test-approved?
+  (with-redefs [github-reviews (constantly [])]
+    (is (not (approved? "foo" "bar" {:id 42}))))
+
+  (with-redefs [github-reviews (constantly [{:state "APPROVED" :user {:id 1}}])]
+    (is (approved? "foo" "bar" {:id 42 })))
+
+  (with-redefs [github-reviews (constantly [{:state "APPROVED" :user {:id 1}}
+                                            {:state "COMMENTED" :user {:id 1}}])]
+    (is (approved? "foo" "bar" {:id 42})))
+
+  (with-redefs [github-reviews (constantly [{:state "APPROVED" :user {:id 1}}
+                                            {:state "CHANGES_REQUESTED" :user {:id 1}}])]
+    (is (not (approved? "foo" "bar" {:id 42}))))
+
+  (with-redefs [github-reviews (constantly [{:state "CHANGES_REQUESTED" :user {:id 1}}
+                                            {:state "APPROVED" :user {:id 1}}])]
+    (is (approved? "foo" "bar" {:id 42})))
+
+  (with-redefs [github-reviews (constantly [{:state "CHANGES_REQUESTED" :user {:id 1}}
+                                            {:state "APPROVED" :user {:id 2}}])]
+    (is (not (approved? "foo" "bar" {:id 42}))))
+
+  (with-redefs [github-reviews (constantly [{:state "CHANGES_REQUESTED" :user {:id 1}}
+                                            {:state "APPROVED" :user {:id 1}}
+                                            {:state "APPROVED" :user {:id 2}}])]
+    (is (approved? "foo" "bar" {:id 42}))))
+
 (deftest test-update-pull-request
   (let [origin-repo-dir (str (System/getProperty "java.io.tmpdir") (UUID/randomUUID))
         origin-repo (git/git-init origin-repo-dir)
