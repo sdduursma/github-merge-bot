@@ -19,7 +19,7 @@
 
 (defn approved? [owner repo pull-request]
   (let [reviews (github-reviews owner repo (:number pull-request))
-        reviews-by-author (partition-by #(-> % :user :id) reviews)
+        reviews-by-author (vals (group-by #(-> % :user :id) reviews))
         approves-by-author (for [reviews reviews-by-author]
                              (->> reviews (map :state) (filter #{"CHANGES_REQUESTED" "APPROVED"}) last (= "APPROVED")))]
     (and
