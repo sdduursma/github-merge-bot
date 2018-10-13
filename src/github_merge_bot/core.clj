@@ -60,7 +60,7 @@
          (.getName master)))))
 
 (defn update-pull-request [owner repo-name pull-request credentials]
-  (println "Updating pull request" (:number pull-request) "by rebasing its head branch on master...")
+  (println (str "Updating pull request #" (:number pull-request) " by rebasing its head branch on master..."))
   (let [^Git repo (procure-repo owner repo-name)
         head (:sha (:head pull-request))
         approved (approved? owner repo-name pull-request)]
@@ -79,7 +79,7 @@
               (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
               (.call))
           (if approved
-            (do (println "Re-approving pull request after updating...")
+            (do (println (str "Re-approving pull request #" (:number pull-request) " after updating..."))
                 (github-create-review owner
                                       repo-name
                                       (:number pull-request)
