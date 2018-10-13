@@ -8,7 +8,7 @@
            (org.eclipse.jgit.revwalk.filter RevFilter)
            (org.eclipse.jgit.lib ObjectId)
            (java.io FileNotFoundException)
-           (org.eclipse.jgit.api Git))
+           (org.eclipse.jgit.api Git RebaseResult$Status RebaseCommand$Operation))
   (:gen-class))
 
 (defn github-reviews [owner repo pr-id & [options]]
@@ -66,25 +66,27 @@
         approved (approved? owner repo-name pull-request)]
     (git/git-fetch repo "origin")
     (git/git-checkout repo head)
-    ; clj-jgit.porcelain/git-rebase hasn't been implemented yet so using JGit here directly instead.
-    (-> repo .rebase (.setUpstream "origin/master") .call)
-    (let [new-head (-> repo .getRepository (.findRef "HEAD") .getObjectId .getName)]
-      ; clj-jgit.porcelain/with-credentials didn't seem to work so using JGit here directly instead.
-      (-> repo
-          (.push)
-          (.setRemote "origin")
-          (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
-          (.setForce true)
-          (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
-          (.call))
-      (if approved
-        (do (println "Re-approving pull request after updating...")
-            (github-create-review owner
-                                  repo-name
-                                  (:number pull-request)
-                                  {:commit-id new-head
-                                   :body  "Automatically re-approving after updating this pull request."
-                                   :event "APPROVE"}))))))
+    (let [rebase-result (-> repo .rebase (.setUpstream "origin/master") .call)]
+      (if-not (= RebaseResult$Status/OK (.getStatus rebase-result))
+        (do (println (str "Unable to rebase pull request #" (:number pull-request) ": rebase result status: " (.getStatus rebase-result)))
+            (-> repo .rebase (.setOperation RebaseCommand$Operation/ABORT) .call))
+        (let [new-head (-> repo .getRepository (.findRef "HEAD") .getObjectId .getName)]
+          (-> repo
+              (.push)
+              (.setRemote "origin")
+              (.setRefSpecs [(RefSpec. (str "HEAD:refs/heads/" (:ref (:head pull-request))))])
+              (.setForce true)
+              (.setCredentialsProvider (UsernamePasswordCredentialsProvider. (:username credentials) (:password credentials)))
+              (.call))
+          (if approved
+            (do (println "Re-approving pull request after updating...")
+                (github-create-review owner
+                                      repo-name
+                                      (:number pull-request)
+                                      {:commit-id new-head
+                                       :body      "Automatically re-approving after updating this pull request."
+                                       :event     "APPROVE"})))))))
+  nil)
 
 (defn try-merge-pull-request [owner repo pull-request credentials]
   (println (str "Trying to merge pull request #" (:number pull-request) "..."))

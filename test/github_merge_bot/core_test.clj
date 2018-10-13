@@ -50,3 +50,25 @@
     (with-redefs [procure-repo (constantly repo)]
       (update-pull-request "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c") {:username "foo" :password "abc"})
       (is (head-up-to-date-with-base? "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c"))))))
+
+(deftest test-update-pull-request-with-conflict
+  (let [origin-repo-dir (str (System/getProperty "java.io.tmpdir") (UUID/randomUUID))
+        origin-repo (git/git-init origin-repo-dir)
+        _ (println origin-repo-dir)
+        _ (spit (str origin-repo-dir "/file.txt") "a")
+        _ (git/git-add origin-repo "file.txt")
+        rev-a (git/git-commit origin-repo "A")
+        _ (spit (str origin-repo-dir "/file.txt") "b" :append true)
+        _ (git/git-add-and-commit origin-repo "B")
+        _ (git/git-checkout origin-repo "feature-c" true false (.getName (.getId rev-a)))
+        _ (spit (str origin-repo-dir "/file.txt") "c" :append true)
+        rev-c (git/git-add-and-commit origin-repo "C")
+        _ (git/git-checkout origin-repo "master")
+        repo (:repo (git/git-clone-full origin-repo-dir (str (System/getProperty "java.io.tmpdir") (UUID/randomUUID))))]
+    (with-redefs [procure-repo (constantly repo)]
+      (update-pull-request "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c") {:username "foo" :password "abc"})
+      (is (= (-> origin-repo .getRepository (.findRef "feature-c") .getObjectId .getName)
+             (.getName rev-c))
+          "There was a conflict, so the remote feature-c branch should not have been modified")
+      (is (nil? (update-pull-request "foo" "bar" (pull-request-for-repo-branch origin-repo "feature-c") {:username "foo" :password "abc"}))
+          "After the conflict the repo should return to a clean state and calling update-pull-request again should work"))))
