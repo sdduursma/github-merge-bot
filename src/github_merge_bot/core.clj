@@ -20,11 +20,11 @@
 (defn approved? [owner repo pull-request]
   (let [reviews (github-reviews owner repo (:number pull-request))
         reviews-by-author (vals (group-by #(-> % :user :id) reviews))
-        approves-by-author (for [reviews reviews-by-author]
-                             (->> reviews (map :state) (filter #{"CHANGES_REQUESTED" "APPROVED"}) last (= "APPROVED")))]
-    (and
-      (not (empty? approves-by-author))
-      (every? true? approves-by-author))))
+        decisive-reviews (map (fn [reviews]
+                                (->> reviews (map :state) (filter #{"CHANGES_REQUESTED" "APPROVED"}) last))
+                              reviews-by-author)]
+    (and (< 0 (count (filter #{"APPROVED"} decisive-reviews)))
+         (not-any? #{"CHANGES_REQUESTED"} decisive-reviews))))
 
 (defn has-label? [pull-request]
   (contains? (set (map :name (:labels pull-request)))

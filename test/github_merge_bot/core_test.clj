@@ -22,6 +22,10 @@
     (is (approved? "foo" "bar" {:id 42})))
 
   (with-redefs [github-reviews (constantly [{:state "APPROVED" :user {:id 1}}
+                                            {:state "COMMENTED" :user {:id 2}}])]
+    (is (approved? "foo" "bar" {:id 42})))
+
+  (with-redefs [github-reviews (constantly [{:state "APPROVED" :user {:id 1}}
                                             {:state "CHANGES_REQUESTED" :user {:id 1}}])]
     (is (not (approved? "foo" "bar" {:id 42}))))
 
