@@ -27,8 +27,9 @@
          (not-any? #{"CHANGES_REQUESTED"} decisive-reviews))))
 
 (defn has-label? [pull-request]
-  (contains? (set (map :name (:labels pull-request)))
-             "LGTM"))
+  (let [labels (set (map :name (:labels pull-request)))]
+    (and (contains? labels "LGTM")
+         (not (contains? labels "do not merge")))))
 
 (defn merge-candidate [owner repo pull-requests]
   (last (filter #(has-label? %)
