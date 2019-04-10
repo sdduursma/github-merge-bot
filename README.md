@@ -62,7 +62,7 @@ github-merge-bot is written in [Clojure](https://clojure.org/). To run it locall
 
 * Java 8 – I recommend using Java 8, I've not tried using later versions. [jEnv](http://www.jenv.be) is a useful tool to manage multiple versions of Java on your system.
 * [Clojure](https://clojure.org/guides/getting_started)
-* [Leinignen](https://leiningen.org/) – The de facto build tool for Clojure
+* [Leiningen](https://leiningen.org/) – The de facto build tool for Clojure
 
 ### Running locally
 
