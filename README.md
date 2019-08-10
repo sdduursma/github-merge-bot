@@ -15,7 +15,7 @@ Say we have two PRs: _A_ and _B_. PR _B_ contains changes that are incompatible 
 
 To solve this, some teams opt to enforce that all PRs are up-to-date with their base branch before merging (see [this GitHub article](https://help.github.com/articles/types-of-required-status-checks/)). However, this creates a new problem: every PR needs to be manually updated and then merged. This can cause a real strain on the team's productivity, especially on repos that receive many contributions.
 
-Projects like [Bors-NG](https://github.com/bors-ng/bors-ng) aim to solve this by providing a fronted on top of the CI system. With Bors-NG there is no need to update PRs. Instead, it will automatically rebuild all open pull requests against the new HEAD of the base branch when a PR is merged. It does this by running the tests against a temporary merge of the base and head branches. The advantage of this approach is that it does not affect the branches that developers are working on. However, Bors-NG can't guarantee that all PRs have been built against the latest version of master before merging. Once the status checks for a PR have passed, GitHub will allow it to be merged. So Bors-NG must quickly set the status checks for a PR to pending. If Bors-NG fails, this can be a problem. All contributors have to know not to merge PRs through GitHub but to use the Bors-NG interface instead.
+Projects like [Bors-NG](https://github.com/bors-ng/bors-ng) aim to solve this by providing a frontend on top of the CI system. With Bors-NG there is no need to update PRs. Instead, it will automatically rebuild all open pull requests against the new HEAD of the base branch when a PR is merged. It does this by running the tests against a temporary merge of the base and head branches. The advantage of this approach is that it does not affect the branches that developers are working on. However, Bors-NG can't guarantee that all PRs have been built against the latest version of master before merging. Once the status checks for a PR have passed, GitHub will allow it to be merged. So Bors-NG must quickly set the status checks for a PR to pending. If Bors-NG fails, this can be a problem. All contributors have to know not to merge PRs through GitHub but to use the Bors-NG interface instead.
 
 Another approach people have taken is to automate the process of updating PRs. This works by running an application that queries GitHub to find PRs to update. When it updates the PR and pushes new commits the CI automatically rebuilds that PR. This is the approach we decided we wanted to go with. We had the following additional requirements:
 
@@ -23,7 +23,7 @@ Another approach people have taken is to automate the process of updating PRs. T
 * Easy to deploy
   * Preferably it doesn't require a database
 
-Before creating github-merge-bot, we considered the these projects:
+Before creating github-merge-bot, we considered these projects:
 
 * [Bulldozer](https://github.com/palantir/bulldozer)
   * \+ Project seems well supported
@@ -83,7 +83,7 @@ lein test
 
 > Everything should be made as simple as possible, but not simpler. – Albert Einstein
 
-Clojure is a dynamic, functional, general purpose programming language that focuses on simplicity and data orientation. It runs on the JVM, so a huge number of Java libraries are available for use.
+Clojure is a dynamic, functional, general-purpose programming language that focuses on simplicity and data orientation. It runs on the JVM, so a huge number of Java libraries are available for use.
 
 If you're unfamiliar with Clojure, [this page](https://clojure.org/guides/learn/syntax) is a good place to start learning.
 
