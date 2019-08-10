@@ -48,12 +48,13 @@ github-merge-bot currently uses username and password or personal access token t
 
 ### Docker
 
-At Depop, we deploy github-merge-bot as a Docker container. You can find the docker images we've built [on Docker Hub](https://hub.docker.com/r/depop/github-merge-bot/tags/).
+github-merge-bot can be deployed easily as a Docker container.
 
-To run the container:
+To build and run the container:
 
 ```bash
-docker run -e GITHUB_MERGE_BOT_OWNER=<repo owner> -e GITHUB_MERGE_BOT_REPO=<repo name> -e GITHUB_MERGE_BOT_USERNAME=<username> -e GITHUB_MERGE_BOT_PASSWORD=<password or token> depop/github-merge-bot:0.4.0
+docker build -t sdduursma/github-merge-bot:0.8.0 .
+docker run -e GITHUB_MERGE_BOT_OWNER=<repo owner> -e GITHUB_MERGE_BOT_REPO=<repo name> -e GITHUB_MERGE_BOT_USERNAME=<username> -e GITHUB_MERGE_BOT_PASSWORD=<password or token> sdduursma/github-merge-bot:0.8.0
 ```
 
 ## Development
