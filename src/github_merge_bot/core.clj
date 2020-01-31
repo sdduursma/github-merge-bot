@@ -115,31 +115,37 @@
                                        :event     "APPROVE"})))))))
   nil)
 
-(defn try-merge-pull-request [owner repo pull-request credentials]
+(defn try-merge-pull-request [owner repo pull-request]
   (println (str "Trying to merge pull request #" (:number pull-request) "..."))
   (let [result (pulls/merge owner repo (:number pull-request) {})]
     (if (:merged result)
       (println (str "Successfully merged pull request #" (:number pull-request) "."))
       (println (str "Unable to merge pull request #" (:number pull-request) ": " (:message result))))))
 
-(defn merge-pull-requests []
+(defn merge-pull-requests [owner repo credentials trusted-teams-permission-scope]
   (println "Checking pull requests...")
-  (let [owner (System/getenv "GITHUB_MERGE_BOT_OWNER")
-        repo (System/getenv "GITHUB_MERGE_BOT_REPO")
-        trusted-teams-permission-scope (System/getenv "GITHUB_MERGE_BOT_TRUSTED_TEAMS_PERMISSION_SCOPE")
-        credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
-                     :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
-    (tentacles/with-defaults {:auth (str (:username credentials) ":" (:password credentials))}
-      (git/with-credentials (:username credentials) (:password credentials)
-        (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
-          (if (head-up-to-date-with-base? owner repo pr)
-            (try-merge-pull-request owner repo pr credentials)
-            (update-pull-request owner repo pr credentials trusted-teams-permission-scope))
-          (println "No pull requests found to merge or update."))))))
+  (if-let [pr (merge-candidate owner repo (pulls/pulls owner repo))]
+    (if (head-up-to-date-with-base? owner repo pr)
+      (try-merge-pull-request owner repo pr)
+      (update-pull-request owner repo pr credentials trusted-teams-permission-scope))
+    (println "No pull requests found to merge or update.")))
+
+(defn run-in-env [function & args]
+  (println "Setting up environment...")
+      (let [owner (System/getenv "GITHUB_MERGE_BOT_OWNER")
+            repo (System/getenv "GITHUB_MERGE_BOT_REPO")
+            trusted-teams-permission-scope (System/getenv "GITHUB_MERGE_BOT_TRUSTED_TEAMS_PERMISSION_SCOPE")
+            credentials {:username (System/getenv "GITHUB_MERGE_BOT_USERNAME")
+                         :password (System/getenv "GITHUB_MERGE_BOT_PASSWORD")}]
+        (tentacles/with-defaults {:auth (str (:username credentials) ":" (:password credentials))}
+          (git/with-credentials (:username credentials) (:password credentials)
+            (match [function]
+              [nil] (merge-pull-requests owner repo credentials trusted-teams-permission-scope)
+              [function] (apply function args))))))
 
 (defn -main
   [& args]
   (let [timer-task (proxy [TimerTask] []
                      (run []
-                       (merge-pull-requests)))]
+                       (run-in-env nil)))]
     (.schedule (Timer.) timer-task 0 30000)))
